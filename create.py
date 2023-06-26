@@ -8,6 +8,7 @@ import whisper_timestamped as whisper
 from datetime import timedelta
 
 CACHE_FOLDER = ".cache"
+LYRICS_FOLDER = "lyrics"
 
 def load_transcription_result(audio_filename):
     cache_filename = get_cache_filename(audio_filename)
@@ -58,9 +59,12 @@ def get_file_hash(filename):
     return hasher.hexdigest()
 
 
-def create_cache_folder():
+def create_folders():
     if not os.path.exists(CACHE_FOLDER):
         os.makedirs(CACHE_FOLDER)
+
+    if not os.path.exists(LYRICS_FOLDER):
+        os.makedirs(LYRICS_FOLDER)
 
 
 def generate_lrc_file(segments, output_filename):
@@ -97,7 +101,7 @@ if len(sys.argv) < 2:
     sys.exit(1)
 
 audio_filename = sys.argv[1]
-create_cache_folder()
+create_folders()
 
 result, singing_percentage, total_singing_duration, song_duration = calculate_singing_percentage(audio_filename)
 segment_count = len(result["segments"])
@@ -107,6 +111,6 @@ print("Total Singing Duration: {}".format(format_time(total_singing_duration)))
 print("Singing Percentage: {:.2f}%".format(singing_percentage))
 print("Total Lyric Segments: {}".format(segment_count))
 
-output_lrc_filename = os.path.split(audio_filename)[1] + ".lrc"
+output_lrc_filename = "lyrics/" + os.path.split(audio_filename)[1] + ".lrc"
 generate_lrc_file(output_lrc_filename, result)
 print("MidiCo LRC file generated: {}".format(output_lrc_filename))
