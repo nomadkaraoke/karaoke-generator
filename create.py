@@ -63,8 +63,33 @@ def create_cache_folder():
         os.makedirs(CACHE_FOLDER)
 
 
-def format_time(seconds):
-    return "{:02}:{:02}".format(int(seconds // 60), int(seconds % 60))
+def generate_lrc_file(segments, output_filename):
+    with open(output_filename, "w") as lrc_file:
+        lrc_file.write("[re:MidiCo]\n")
+        for segment in segments:
+            if segment["confidence"] >= 0.3:
+                start_time = segment["start"]
+                word = segment["word"]
+                lrc_file.write("[{:0>2d}:{:06.3f}]1:{}\n".format(int(start_time // 60), start_time % 60, word))
+
+def generate_lrc_file(lrc_filename, result):
+    with open(lrc_filename, "w") as f:
+        f.write("[re:MidiCo]\n")
+        for segment in result["segments"]:
+            for i, word in enumerate(segment["words"]):
+                start_time = format_time(word["start"])
+                if i != len(segment["words"]) - 1:
+                    word["text"] += " "
+                line = "[{}]1:{}{}\n".format(start_time, "/" if i == 0 else "", word["text"])
+                f.write(line)
+
+
+def format_time(duration):
+    minutes = int(duration // 60)
+    seconds = int(duration % 60)
+    milliseconds = int((duration % 1) * 1000)
+    formatted_time = f"{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
+    return formatted_time
 
 
 if len(sys.argv) < 2:
@@ -81,3 +106,7 @@ print("Total Song Duration: {}".format(format_time(song_duration)))
 print("Total Singing Duration: {}".format(format_time(total_singing_duration)))
 print("Singing Percentage: {:.2f}%".format(singing_percentage))
 print("Total Lyric Segments: {}".format(segment_count))
+
+output_lrc_filename = os.path.split(audio_filename)[1] + ".lrc"
+generate_lrc_file(output_lrc_filename, result)
+print("MidiCo LRC file generated: {}".format(output_lrc_filename))
