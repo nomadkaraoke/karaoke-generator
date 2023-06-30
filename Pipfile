@@ -4,6 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+whisper_timestamped = {git = "https://github.com/linto-ai/whisper-timestamped.git", editable = true}
+audio-separator = "*"
 
 [dev-packages]
 

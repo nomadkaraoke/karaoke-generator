@@ -5,7 +5,7 @@ import json
 import os
 import hashlib
 import whisper_timestamped as whisper
-from datetime import timedelta
+from audio_separator.audio_separator import Separator
 
 CACHE_FOLDER = ".cache"
 LYRICS_FOLDER = "lyrics"
@@ -114,3 +114,8 @@ print("Total Lyric Segments: {}".format(segment_count))
 output_lrc_filename = "lyrics/" + os.path.split(audio_filename)[1] + ".lrc"
 generate_lrc_file(output_lrc_filename, result)
 print("MidiCo LRC file generated: {}".format(output_lrc_filename))
+
+separator = Separator(audio_filename)
+primary_stem_path, secondary_stem_path = separator.separate()
+
+print(f'Separation complete! Output files: {primary_stem_path} {secondary_stem_path}')
