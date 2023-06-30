@@ -2,6 +2,8 @@
 import os
 import sys
 import warnings
+import hashlib
+import json
 
 import torch
 import librosa
@@ -24,17 +26,13 @@ class Separator:
         self.audio_file = audio_file
         self.audio_file_base = os.path.splitext(os.path.basename(audio_file))[0]
 
+        # Download model file from https://github.com/karaokenerds/karaoke-video-generator/releases/download/untagged-bdd80ca34bc3dc10c448/UVR_MDXNET_KARA_2.onnx
         self.model_path = 'models/UVR_MDXNET_KARA_2.onnx'
+        self.model_data_path = 'models/model_data.json'
 
         self.wav_type_set = "PCM_16"
         self.is_normalization = False
         self.is_denoise = False
-
-        # These params are specific to the UVR_MDXNET_KARA_2 model
-        # Fetched from model_data.json in UVR/models for model with hash 1d64a6d2c30f709b8c9b4ce1366d96ee
-        self.compensate = 1.035
-        self.dim_f, self.dim_t = 2048, 2**8
-        self.n_fft = 5120
 
         self.chunks = 0
         self.margin = 44100
@@ -44,16 +42,38 @@ class Separator:
 
         self.primary_source = None
         self.secondary_source = None
+        self.model_data = None
 
         self.device, self.run_type = torch.device('cpu'), ['CPUExecutionProvider']
 
-    def write_audio(self, stem_path, stem_source, samplerate):
-        sf.write(stem_path, stem_source, samplerate, subtype=self.wav_type_set)
+    def get_model_hash(self):
+        try:
+            with open(self.model_path, 'rb') as f:
+                f.seek(- 10000 * 1024, 2)
+                return hashlib.md5(f.read()).hexdigest()
+        except:
+            return hashlib.md5(open(self.model_path,'rb').read()).hexdigest()
 
     def separate(self):
-        print_with_timestamp('Loading model...')
+        print_with_timestamp('Reading model settings...')
         samplerate = 44100
 
+        model_hash = self.get_model_hash()
+        print_with_timestamp(f'Model {self.model_path} has hash {model_hash} ...')
+        
+        model_data_object = json.load(open(self.model_data_path))
+        self.model_data = model_data_object[model_hash]
+        
+        self.compensate = self.model_data["compensate"]
+        self.dim_f = self.model_data["mdx_dim_f_set"]
+        self.dim_t = 2**self.model_data["mdx_dim_t_set"]
+        self.n_fft = self.model_data["mdx_n_fft_scale_set"]
+        self.primary_stem = self.model_data["primary_stem"]
+        self.secondary_stem = "Vocals" if self.primary_stem == "Instrumental" else "Instrumental"
+
+        print_with_timestamp(f'Set model data values: compensate = {self.compensate} primary_stem = {self.primary_stem} dim_f = {self.dim_f} dim_t = {self.dim_t} n_fft = {self.n_fft}') 
+
+        print_with_timestamp('Loading model...')
         ort_ = ort.InferenceSession(self.model_path, providers=self.run_type)
         self.model_run = lambda spek:ort_.run(None, {'input': spek.cpu().numpy()})[0]
 
@@ -61,16 +81,17 @@ class Separator:
         print_with_timestamp('Running inference...')
         mdx_net_cut = True
         mix, raw_mix, samplerate = prepare_mix(self.audio_file, self.chunks, self.margin, mdx_net_cut=mdx_net_cut)
+        print_with_timestamp('Demixing...')
         source = self.demix_base(mix)[0]
 
-        print_with_timestamp(f'Saving Instrumental stem...')
-        primary_stem_path = os.path.join(f'{self.audio_file_base}_(Instrumental).wav')
+        print_with_timestamp(f'Saving {self.primary_stem} stem...')
+        primary_stem_path = os.path.join(f'{self.audio_file_base}_({self.primary_stem}).wav')
         if not isinstance(self.primary_source, np.ndarray):
             self.primary_source = spec_utils.normalize(source, self.is_normalization).T
         self.write_audio(primary_stem_path, self.primary_source, samplerate)
 
-        print_with_timestamp(f'Saving Vocals stem...')
-        secondary_stem_path = os.path.join(f'{self.audio_file_base}_(Vocals).wav')
+        print_with_timestamp(f'Saving {self.secondary_stem} stem...')
+        secondary_stem_path = os.path.join(f'{self.audio_file_base}_({self.secondary_stem}).wav')
         if not isinstance(self.secondary_source, np.ndarray):
             raw_mix = self.demix_base(raw_mix, is_match_mix=True)[0] if mdx_net_cut else raw_mix
             self.secondary_source, raw_mix = spec_utils.normalize_two_stem(source*self.compensate, raw_mix, self.is_normalization)
@@ -78,6 +99,9 @@ class Separator:
         self.write_audio(secondary_stem_path, self.secondary_source, samplerate)
 
         torch.cuda.empty_cache()
+
+    def write_audio(self, stem_path, stem_source, samplerate):
+        sf.write(stem_path, stem_source, samplerate, subtype=self.wav_type_set)
 
     def initialize_model_settings(self):
         self.n_bins = self.n_fft//2+1
@@ -199,13 +223,10 @@ def prepare_mix(mix, chunk_set, margin_set, mdx_net_cut=False, is_missing_mix=Fa
                 break
             
         return segmented_mix
-
-    if is_missing_mix:
-        return mix
-    else:
-        segmented_mix = get_segmented_mix()
-        raw_mix = get_segmented_mix(chunk_set=0) if mdx_net_cut else mix
-        return segmented_mix, raw_mix, samplerate
+    
+    segmented_mix = get_segmented_mix()
+    raw_mix = get_segmented_mix(chunk_set=0) if mdx_net_cut else mix
+    return segmented_mix, raw_mix, samplerate
 
 if len(sys.argv) < 2:
     print_with_timestamp("Please provide the WAV audio file path to separate as the first command-line parameter.")

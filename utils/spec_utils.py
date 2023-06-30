@@ -6,6 +6,7 @@ import random
 import math
 import platform
 import traceback
+import datetime
 
 OPERATING_SYSTEM = platform.system()
 SYSTEM_ARCH = platform.platform()
@@ -25,6 +26,10 @@ else:
 MAX_SPEC = 'Max Spec'
 MIN_SPEC = 'Min Spec'
 AVERAGE = 'Average'
+
+def print_with_timestamp(message):
+    timestamp = datetime.datetime.now().isoformat()
+    print(f"{timestamp} - {message}")
 
 def crop_center(h1, h2):
     h1_shape = h1.size()
@@ -110,14 +115,14 @@ def normalize(wave, is_normalize=False):
     """Save output music files"""
     maxv = np.abs(wave).max()
     if maxv > 1.0:
-        print(f"\nNormalization Set {is_normalize}: Input above threshold for clipping. Max:{maxv}")
+        print_with_timestamp(f"Normalization Set {is_normalize}: Input above threshold for clipping. Max:{maxv}")
         if is_normalize:
             print(f"The result was normalized.")
             wave /= maxv
         else:
             print(f"The result was not normalized.")
     else:
-        print(f"\nNormalization Set {is_normalize}: Input not above threshold for clipping. Max:{maxv}")
+        print_with_timestamp(f"Normalization Set {is_normalize}: Input not above threshold for clipping. Max:{maxv}")
     
     return wave
     
@@ -128,8 +133,8 @@ def normalize_two_stem(wave, mix, is_normalize=False):
     max_mix = np.abs(mix).max()
     
     if maxv > 1.0:
-        print(f"\nNormalization Set {is_normalize}: Primary source above threshold for clipping. Max:{maxv}")
-        print(f"\nNormalization Set {is_normalize}: Mixture above threshold for clipping. Max:{max_mix}")
+        print_with_timestamp(f"Normalization Set {is_normalize}: Primary source above threshold for clipping. Max:{maxv}")
+        print_with_timestamp(f"Normalization Set {is_normalize}: Mixture above threshold for clipping. Max:{max_mix}")
         if is_normalize:
             print(f"The result was normalized.")
             wave /= maxv
@@ -137,11 +142,11 @@ def normalize_two_stem(wave, mix, is_normalize=False):
         else:
             print(f"The result was not normalized.")
     else:
-        print(f"\nNormalization Set {is_normalize}: Input not above threshold for clipping. Max:{maxv}")
+        print_with_timestamp(f"Normalization Set {is_normalize}: Input not above threshold for clipping. Max:{maxv}")
     
     
-    print(f"\nNormalization Set {is_normalize}: Primary source - Max:{np.abs(wave).max()}")
-    print(f"\nNormalization Set {is_normalize}: Mixture - Max:{np.abs(mix).max()}")
+    print_with_timestamp(f"Normalization Set {is_normalize}: Primary source - Max:{np.abs(wave).max()}")
+    print_with_timestamp(f"Normalization Set {is_normalize}: Mixture - Max:{np.abs(mix).max()}")
     
     return wave, mix    
 
