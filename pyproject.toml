@@ -5,14 +5,14 @@ description = "Fully automated creation of _acceptable_ karaoke music videos fro
 authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "karaoke_generator"}]
+packages = [{ include = "karaoke_generator" }]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
 yt-dlp = "^2023.6.22"
 pydub = "^0.25.1"
 audio-separator = "^0"
-lyrics-transcriber = "^0.3.2"
+lyrics-transcriber = { git = "https://github.com/karaokenerds/python-lyrics-transcriber.git" }
 
 [tool.poetry.scripts]
 karaoke-generator = 'karaoke_generator.utils.cli:main'
