@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "karaoke-video-generator"
+version = "0.2.0"
+description = "Fully automated creation of _acceptable_ karaoke music videos from any music on YouTube, using open source tools and AI (e.g. Whisper and MDX-Net)"
+authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "karaoke_generator"}]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+yt-dlp = "^2023.6.22"
+pydub = "^0.25.1"
+audio-separator = "^0"
+lyrics-transcriber = "^0.3.2"
+
+[tool.poetry.scripts]
+karaoke-generator = 'karaoke_generator.utils.cli:main'
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
