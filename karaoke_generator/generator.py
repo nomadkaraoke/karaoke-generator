@@ -1,6 +1,7 @@
 import os
 import hashlib
 import datetime
+import shutil
 import yt_dlp
 from audio_separator import Separator
 from lyrics_transcriber import LyricsTranscriber
@@ -13,8 +14,11 @@ class KaraokeGenerator:
         audio_file=None,
         output_dir=None,
         model_name="UVR_MDXNET_KARA_2",
-        model_file_dir="/tmp/audio-separator-models/",
-        cache_dir="/tmp/karaoke-generator-cache/",
+        model_file_dir="/tmp/audio-separator-models",
+        cache_dir="/tmp/karaoke-generator-cache",
+        genius_api_token=False,
+        song_artist=None,
+        song_title=None,
     ):
         log("KaraokeGenerator initializing")
 
@@ -23,6 +27,10 @@ class KaraokeGenerator:
         self.cache_dir = cache_dir
         self.output_dir = output_dir
 
+        self.genius_api_token=genius_api_token,
+        self.song_artist=song_artist,
+        self.song_title=song_title,
+        
         if audio_file is None and youtube_url is None:
             raise Exception(
                 "Either audio_file or youtube_url must be specified as the input source"
@@ -33,9 +41,6 @@ class KaraokeGenerator:
 
         self.create_folders()
 
-    def get_file_hash(self, filepath):
-        return hashlib.md5(open(filepath, "rb").read()).hexdigest()
-
     def generate(self):
         log("KaraokeGenerator beginning generation")
 
@@ -44,33 +49,36 @@ class KaraokeGenerator:
                 f"audio_file is none and youtube_url is {self.youtube_url}, fetching video with yt-dlp"
             )
 
-            URLS = [self.youtube_url]
-
             ydl_opts = {
                 "format": "bestaudio/best",
                 "postprocessors": [
-                    {  # Extract audio using ffmpeg
+                    {
                         "key": "FFmpegExtractAudio",
                         "preferredcodec": "wav",
                     }
                 ],
+                "outtmpl": os.path.join(self.cache_dir, "%(id)s_%(title)s.%(ext)s")
             }
 
             # Download and convert the audio to WAV
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([self.youtube_url])
+                info = ydl.extract_info(self.youtube_url, download=False)
+                orig_filepath = ydl.prepare_filename(info)
 
-            # Calculate the hash of the file contents
-            temp_filepath = f"{self.cache_dir}/temp.wav"
-            file_hash = self.get_file_hash(temp_filepath)
+                wav_filepath = os.path.splitext(orig_filepath)[0] + ".wav"
+                log(f"wav_filepath: {wav_filepath}")
 
-            # Rename the file to its hash and move it to the cache directory
-            final_filepath = f"{self.cache_dir}/{file_hash}.wav"
-            os.rename(temp_filepath, final_filepath)
+                if os.path.isfile(wav_filepath):
+                    log(f"found existing file at wav_filepath, skipping download: {wav_filepath}")
+                else:
+                    ydl.download([self.youtube_url])
 
-            # Update self.audio_file with the new file path
-            self.audio_file = final_filepath
-            log(f"audio_file updated: {self.audio_file}")
+                if self.output_dir:
+                    shutil.copy(wav_filepath, self.output_dir)
+
+                # Update self.audio_file with the new file path
+                self.audio_file = wav_filepath
+                log(f"audio_file updated: {self.audio_file}")
 
         elif self.audio_file is None:
             raise Exception("No audio source provided.")
@@ -107,17 +115,16 @@ class KaraokeGenerator:
         formatted_duration = f'{int(result_metadata["song_duration"] // 60):02d}:{int(result_metadata["song_duration"] % 60):02d}'
         log(f"Total Song Duration: {formatted_duration}")
 
-        formatted_singing_duration = (
-            f'{int(result_metadata["total_singing_duration"] // 60):02d}:{int(result_metadata["total_singing_duration"] % 60):02d}'
-        )
+        formatted_singing_duration = f'{int(result_metadata["total_singing_duration"] // 60):02d}:{int(result_metadata["total_singing_duration"] % 60):02d}'
         log(f"Total Singing Duration: {formatted_singing_duration}")
         log(f"Singing Percentage: {result_metadata['singing_percentage']}%")
 
         log(f"*** Outputs: ***")
-        log(f"Whisper transcription output JSON file: {result_metadata['whisper_json_filepath']}")
+        log(
+            f"Whisper transcription output JSON file: {result_metadata['whisper_json_filepath']}"
+        )
         log(f"MidiCo LRC output file: {result_metadata['midico_lrc_filepath']}")
         log(f"Genius lyrics output file: {result_metadata['genius_lyrics_filepath']}")
-
 
     def create_folders(self):
         if self.cache_dir is not None:
