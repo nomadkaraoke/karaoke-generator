@@ -9,7 +9,7 @@ def main():
     logger.setLevel(logging.DEBUG)
 
     log_handler = logging.StreamHandler()
-    log_formatter = logging.Formatter("%(asctime)s - %(module)s - %(levelname)s - %(message)s")
+    log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
     log_handler.setFormatter(log_formatter)
     logger.addHandler(log_handler)
 

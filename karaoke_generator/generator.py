@@ -23,7 +23,7 @@ class KaraokeGenerator:
         cache_dir="/tmp/karaoke-generator-cache",
         output_dir=None,
         log_level=logging.DEBUG,
-        log_format="%(asctime)s - %(module)s - %(levelname)s - %(message)s",
+        log_format="%(asctime)s - %(levelname)s - %(module)s - %(message)s",
     ):
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
