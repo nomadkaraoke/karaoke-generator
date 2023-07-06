@@ -1,5 +1,8 @@
 import os
+import sys
 import json
+import re
+import regex
 import urllib
 import shutil
 import logging
@@ -18,6 +21,7 @@ class KaraokeGenerator:
         song_artist=None,
         song_title=None,
         genius_api_token=None,
+        spotify_cookie=None,
         model_name="UVR_MDXNET_KARA_2",
         model_file_dir="/tmp/audio-separator-models",
         cache_dir="/tmp/karaoke-generator-cache",
@@ -40,7 +44,9 @@ class KaraokeGenerator:
         self.cache_dir = cache_dir
         self.output_dir = output_dir
 
-        self.genius_api_token = genius_api_token
+        self.genius_api_token = os.getenv("GENIUS_API_TOKEN", default=genius_api_token)
+        self.spotify_cookie = os.getenv("SPOTIFY_COOKIE_SP_DC", default=spotify_cookie)
+
         self.song_artist = song_artist
         self.song_title = song_title
 
@@ -88,6 +94,7 @@ class KaraokeGenerator:
         transcriber = LyricsTranscriber(
             self.audio_file,
             genius_api_token=self.genius_api_token,
+            spotify_cookie=self.spotify_cookie,
             song_artist=self.song_artist,
             song_title=self.song_title,
             output_dir=self.output_dir,
@@ -114,10 +121,7 @@ class KaraokeGenerator:
         self.logger.debug(f"Whisper transcription output JSON file: {transcription_metadata['whisper_json_filepath']}")
         self.logger.debug(f"MidiCo LRC output file: {transcription_metadata['midico_lrc_filepath']}")
         self.logger.debug(f"Genius lyrics output file: {transcription_metadata['genius_lyrics_filepath']}")
-
-        if self.output_dir:
-            shutil.copy(self.output_values["transcription_metadata"]["midico_lrc_filepath"], self.output_dir)
-            shutil.copy(self.output_values["transcription_metadata"]["genius_lyrics_filepath"], self.output_dir)
+        self.logger.debug(f"Spotify lyrics output file: {transcription_metadata['genius_lyrics_filepath']}")
 
     def separate_audio(self):
         if self.audio_file is None or not os.path.isfile(self.audio_file):
@@ -153,9 +157,9 @@ class KaraokeGenerator:
         if os.path.isfile(ydl_info_cache_file):
             self.logger.debug(f"Reading ydl info from cache: {ydl_info_cache_file}")
             with open(ydl_info_cache_file, "r") as cache_file:
-                info = json.load(cache_file)
-                self.youtube_video_file = info["download_filepath"]
-                self.output_filename_slug = info["output_filename_slug"]
+                youtube_info = json.load(cache_file)
+                self.youtube_video_file = youtube_info["download_filepath"]
+                self.output_filename_slug = youtube_info["output_filename_slug"]
         else:
             self.logger.debug(f"No existing YDL info file found")
 
@@ -167,37 +171,50 @@ class KaraokeGenerator:
             ydl_opts = {
                 "logger": YoutubeDLLogger(self.logger),
                 "format": "best",
+                "parse-metadata": "pre_process",
                 "outtmpl": os.path.join(self.cache_dir, "%(id)s-%(title)s.%(ext)s"),
             }
 
             # Download the original highest quality file
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(self.youtube_url, download=False)
+                youtube_info = ydl.extract_info(self.youtube_url, download=False)
 
-                temp_download_filepath = ydl.prepare_filename(info)
+                temp_download_filepath = ydl.prepare_filename(youtube_info)
                 self.logger.debug(f"temp_download_filepath: {temp_download_filepath}")
 
                 download_file_extension = os.path.splitext(os.path.basename(temp_download_filepath))[1]
                 self.logger.debug(f"download_file_extension: {download_file_extension}")
 
                 # Create a slugified filename prefix to get rid of spaces and unicode characters from youtube titles
-                info["output_filename_slug"] = info["id"] + "-" + slugify.slugify(info["title"], lowercase=False)
-                self.output_filename_slug = info["output_filename_slug"]
+                youtube_info["output_filename_slug"] = youtube_info["id"] + "-" + slugify.slugify(youtube_info["title"], lowercase=False)
+                self.output_filename_slug = youtube_info["output_filename_slug"]
                 self.logger.debug(f"output_filename_slug: {self.output_filename_slug}")
 
                 # but retain original file extension (which may vary depending on the video format youtube returns)
-                info["download_filepath"] = os.path.join(self.cache_dir, self.output_filename_slug + download_file_extension)
-                self.logger.debug(f"download_filepath: {info['download_filepath'] }")
+                youtube_info["download_filepath"] = os.path.join(self.cache_dir, self.output_filename_slug + download_file_extension)
+                self.logger.debug(f"download_filepath: {youtube_info['download_filepath'] }")
 
                 # Save the ydl.extract_info output to cache file
                 self.logger.debug(f"Saving sanitized YT-DLP info to cache: {ydl_info_cache_file}")
                 with open(ydl_info_cache_file, "w") as cache_file:
-                    json.dump(ydl.sanitize_info(info), cache_file, indent=4)
+                    json.dump(ydl.sanitize_info(youtube_info), cache_file, indent=4)
 
                 ydl.download([self.youtube_url])
-                shutil.move(temp_download_filepath, info["download_filepath"])
-                self.youtube_video_file = info["download_filepath"]
+                shutil.move(temp_download_filepath, youtube_info["download_filepath"])
+                self.youtube_video_file = youtube_info["download_filepath"]
                 self.logger.debug(f"successfully downloaded youtube video to path: {self.youtube_video_file}")
+
+        if self.song_title is None:
+            self.logger.debug(f"Song title not specified, attempting to split from YouTube title: {youtube_info['title']}")
+            # Define the hyphen variations pattern
+            hyphen_pattern = regex.compile(r" [^[:ascii:]-_\p{Dash}] ")
+            # Split the string using the hyphen variations pattern
+            title_parts = hyphen_pattern.split(youtube_info["title"])
+
+            self.song_artist = title_parts[0]
+            self.song_title = title_parts[1]
+
+            print(f"Guessed metadata from title: Artist: {self.song_artist}, Title: {self.song_title}")
 
         # Extract audio to WAV file using ffmpeg
         self.audio_file = os.path.join(self.cache_dir, self.output_filename_slug + ".wav")

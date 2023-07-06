@@ -32,18 +32,23 @@ def main():
     parser.add_argument(
         "--song_artist",
         default=None,
-        help="Optional: specify song artist for Genius lyrics lookup and auto-correction",
+        help="Optional: specify song artist for lyrics lookup and auto-correction",
     )
     parser.add_argument(
         "--song_title",
         default=None,
-        help="Optional: specify song title for Genius lyrics lookup and auto-correction",
+        help="Optional: specify song title for lyrics lookup and auto-correction",
     )
 
     parser.add_argument(
         "--genius_api_token",
         default=None,
         help="Optional: specify Genius API token for lyrics lookup and auto-correction",
+    )
+    parser.add_argument(
+        "--spotify_cookie",
+        default=None,
+        help="Optional: specify Spotify SP_DC cookie value for lyrics lookup and auto-correction",
     )
 
     parser.add_argument(
@@ -77,21 +82,17 @@ def main():
         song_artist=args.song_artist,
         song_title=args.song_title,
         genius_api_token=args.genius_api_token,
+        spotify_cookie=args.spotify_cookie,
         model_name=args.model_name,
         model_file_dir=args.model_file_dir,
         cache_dir=args.cache_dir,
         output_dir=args.output_dir,
     )
-    output_files = generator.generate()
+    outputs = generator.generate()
 
-    logger.info(f"Karaoke generation complete! Outputs: ")
-    for key in output_files:
-        if type(output_files[key]) is dict:
-            for key2 in output_files[key]:
-                print(f"{key} / {key2}: {output_files[key][key2]}")
-        else:
-            print(f"{key}: {output_files[key]}")
+    logger.info(f"Karaoke generation complete!")
 
-
+    logger.debug(f"Output folder: {outputs['output_dir']}")
+    
 if __name__ == "__main__":
     main()

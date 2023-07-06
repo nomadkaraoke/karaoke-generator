@@ -12,8 +12,9 @@ python = ">=3.9,<3.11"
 yt-dlp = "^2023.6.22"
 pydub = "^0.25.1"
 audio-separator = "^0"
-lyrics-transcriber = { git = "https://github.com/karaokenerds/python-lyrics-transcriber.git" }
+lyrics-transcriber = "^0.5.1"
 python-slugify = "^8.0.1"
+regex = "^2023.6.3"
 
 [tool.poetry.scripts]
 karaoke-generator = 'karaoke_generator.utils.cli:main'
