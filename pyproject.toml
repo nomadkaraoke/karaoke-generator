@@ -13,9 +13,16 @@ yt-dlp = "^2023.6.22"
 pydub = "^0.25.1"
 audio-separator = "^0"
 lyrics-transcriber = { git = "https://github.com/karaokenerds/python-lyrics-transcriber.git" }
+python-slugify = "^8.0.1"
 
 [tool.poetry.scripts]
 karaoke-generator = 'karaoke_generator.utils.cli:main'
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
+
+[tool.black]
+line-length = 140
 
 [build-system]
 requires = ["poetry-core"]

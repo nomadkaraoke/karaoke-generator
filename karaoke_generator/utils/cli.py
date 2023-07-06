@@ -1,18 +1,21 @@
 #!/usr/bin/env python
 import argparse
-import datetime
+import logging
 from karaoke_generator import KaraokeGenerator
 
 
-def log(message):
-    timestamp = datetime.datetime.now().isoformat()
-    print(f"{timestamp} - {message}")
-
-
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate karaoke music video for either a local audio file or YouTube URL"
-    )
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+
+    log_handler = logging.StreamHandler()
+    log_formatter = logging.Formatter("%(asctime)s - %(module)s - %(levelname)s - %(message)s")
+    log_handler.setFormatter(log_formatter)
+    logger.addHandler(log_handler)
+
+    logger.debug("Parsing CLI args")
+
+    parser = argparse.ArgumentParser(description="Generate karaoke music video for either a local audio file or YouTube URL")
 
     input_group = parser.add_mutually_exclusive_group(required=True)
     input_group.add_argument(
@@ -24,6 +27,23 @@ def main():
         "--audio_file",
         default=None,
         help="Optional: audio file path to make karaoke version of.",
+    )
+
+    parser.add_argument(
+        "--song_artist",
+        default=None,
+        help="Optional: specify song artist for Genius lyrics lookup and auto-correction",
+    )
+    parser.add_argument(
+        "--song_title",
+        default=None,
+        help="Optional: specify song title for Genius lyrics lookup and auto-correction",
+    )
+
+    parser.add_argument(
+        "--genius_api_token",
+        default=None,
+        help="Optional: specify Genius API token for lyrics lookup and auto-correction",
     )
 
     parser.add_argument(
@@ -41,25 +61,36 @@ def main():
         default="/tmp/karaoke-generator-cache/",
         help="Optional: directory to cache generated files to avoid wasted computation.",
     )
+    parser.add_argument(
+        "--output_dir",
+        default=None,
+        help="Optional: directory to write output files to. Defaults to a folder in the current directory.",
+    )
 
     args = parser.parse_args()
 
-    log(
-        f"Karaoke generator beginning with audio_file: {args.audio_file} / youtube_url: {args.youtube_url}"
-    )
+    logger.info(f"Karaoke generator beginning with audio_file: {args.audio_file} / youtube_url: {args.youtube_url}")
 
     generator = KaraokeGenerator(
         audio_file=args.audio_file,
         youtube_url=args.youtube_url,
+        song_artist=args.song_artist,
+        song_title=args.song_title,
+        genius_api_token=args.genius_api_token,
         model_name=args.model_name,
         model_file_dir=args.model_file_dir,
         cache_dir=args.cache_dir,
+        output_dir=args.output_dir,
     )
-    output_dir_path, output_video_path = generator.generate()
+    output_files = generator.generate()
 
-    log(
-        f"Karaoke generation complete! Output dir: {output_dir_path} Karaoke video: {output_video_path}"
-    )
+    logger.info(f"Karaoke generation complete! Outputs: ")
+    for key in output_files:
+        if type(output_files[key]) is dict:
+            for key2 in output_files[key]:
+                print(f"{key} / {key2}: {output_files[key][key2]}")
+        else:
+            print(f"{key}: {output_files[key]}")
 
 
 if __name__ == "__main__":
