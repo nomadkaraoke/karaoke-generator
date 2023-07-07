@@ -1,54 +1,50 @@
 #!/usr/bin/env python
 import argparse
 import logging
+import pkg_resources
 from karaoke_generator import KaraokeGenerator
 
 
 def main():
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-
     log_handler = logging.StreamHandler()
-    log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
+    log_formatter = logging.Formatter(fmt="%(asctime)s.%(msecs)03d - %(levelname)s - %(module)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     log_handler.setFormatter(log_formatter)
     logger.addHandler(log_handler)
 
-    logger.debug("Parsing CLI args")
-
-    parser = argparse.ArgumentParser(description="Generate karaoke music video for either a local audio file or YouTube URL")
-
-    input_group = parser.add_mutually_exclusive_group(required=True)
-    input_group.add_argument(
-        "--youtube_url",
-        default=None,
-        help="Optional: YouTube URL to make karaoke version of.",
-    )
-    input_group.add_argument(
-        "--audio_file",
-        default=None,
-        help="Optional: audio file path to make karaoke version of.",
+    parser = argparse.ArgumentParser(
+        description="Generate karaoke music video for either a local audio file or YouTube URL",
+        formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=40),
     )
 
     parser.add_argument(
-        "--song_artist",
+        "input_path", nargs="?", help="The audio file path or YouTube URL to make karaoke version of.", default=argparse.SUPPRESS
+    )
+
+    package_version = pkg_resources.get_distribution("karaoke-video-generator").version
+    parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {package_version}")
+    parser.add_argument("--log_level", default="INFO", help="Optional: Logging level, e.g. info, debug, warning. Default: INFO")
+
+    parser.add_argument(
+        "--artist",
         default=None,
-        help="Optional: specify song artist for lyrics lookup and auto-correction",
+        help="Optional: song artist for lyrics lookup and auto-correction",
     )
     parser.add_argument(
-        "--song_title",
+        "--title",
         default=None,
-        help="Optional: specify song title for lyrics lookup and auto-correction",
+        help="Optional: song title for lyrics lookup and auto-correction",
     )
 
     parser.add_argument(
         "--genius_api_token",
         default=None,
-        help="Optional: specify Genius API token for lyrics lookup and auto-correction",
+        help="Optional: Genius API token for lyrics fetching. Can also be set with GENIUS_API_TOKEN env var.",
     )
     parser.add_argument(
         "--spotify_cookie",
         default=None,
-        help="Optional: specify Spotify SP_DC cookie value for lyrics lookup and auto-correction",
+        help="Optional: Spotify sp_dc cookie value for lyrics fetching. Can also be set with SPOTIFY_COOKIE_SP_DC env var.",
     )
 
     parser.add_argument(
@@ -74,13 +70,21 @@ def main():
 
     args = parser.parse_args()
 
-    logger.info(f"Karaoke generator beginning with audio_file: {args.audio_file} / youtube_url: {args.youtube_url}")
+    log_level = getattr(logging, args.log_level.upper())
+    logger.setLevel(log_level)
+
+    if not hasattr(args, "input_path"):
+        parser.print_help()
+        exit(1)
+
+    logger.info(f"Karaoke generator beginning with input_path: {args.input_path}")
 
     generator = KaraokeGenerator(
-        audio_file=args.audio_file,
-        youtube_url=args.youtube_url,
-        song_artist=args.song_artist,
-        song_title=args.song_title,
+        log_formatter=log_formatter,
+        log_level=log_level,
+        input_path=args.input_path,
+        artist=args.artist,
+        title=args.title,
         genius_api_token=args.genius_api_token,
         spotify_cookie=args.spotify_cookie,
         model_name=args.model_name,
@@ -93,6 +97,7 @@ def main():
     logger.info(f"Karaoke generation complete!")
 
     logger.debug(f"Output folder: {outputs['output_dir']}")
-    
+
+
 if __name__ == "__main__":
     main()

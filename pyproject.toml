@@ -11,10 +11,15 @@ packages = [{ include = "karaoke_generator" }]
 python = ">=3.9,<3.11"
 yt-dlp = "^2023.6.22"
 pydub = "^0.25.1"
-audio-separator = "^0"
-lyrics-transcriber = "^0.5.1"
+audio-separator = "^0.3"
+lyrics-transcriber = "^0.6"
 python-slugify = "^8.0.1"
 regex = "^2023.6.3"
+# Note: after adding lyrics-transcriber with poetry lock, I then removed all traces of triton
+# from poetry.lock before running poetry install, as triton doesn't support macOS but isn't actually needed for whisper.
+# This was the only way I was able to get a working cross-platform build published to PyPI.
+# To update the lockfile and install/upgrade dependencies, modify the dependency list above then run:
+# poetry lock; patch -p0 poetry.lock <.github/removetriton.patch; poetry install
 
 [tool.poetry.scripts]
 karaoke-generator = 'karaoke_generator.utils.cli:main'

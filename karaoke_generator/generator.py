@@ -16,60 +16,67 @@ from lyrics_transcriber import LyricsTranscriber
 class KaraokeGenerator:
     def __init__(
         self,
-        youtube_url=None,
-        audio_file=None,
-        song_artist=None,
-        song_title=None,
+        log_level=logging.DEBUG,
+        log_formatter=None,
+        input_path=None,
+        artist=None,
+        title=None,
         genius_api_token=None,
         spotify_cookie=None,
         model_name="UVR_MDXNET_KARA_2",
         model_file_dir="/tmp/audio-separator-models",
         cache_dir="/tmp/karaoke-generator-cache",
         output_dir=None,
-        log_level=logging.DEBUG,
-        log_format="%(asctime)s - %(levelname)s - %(module)s - %(message)s",
     ):
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
+        self.log_level = log_level
+        self.log_formatter = log_formatter
 
-        log_handler = logging.StreamHandler()
-        log_formatter = logging.Formatter(log_format)
-        log_handler.setFormatter(log_formatter)
-        self.logger.addHandler(log_handler)
+        self.log_handler = logging.StreamHandler()
+
+        if self.log_formatter is None:
+            self.log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
+
+        self.log_handler.setFormatter(self.log_formatter)
+        self.logger.addHandler(self.log_handler)
 
         self.logger.debug("KaraokeGenerator initializing")
+
+        self.input_path = input_path
+        self.artist = artist
+        self.title = title
+
+        self.genius_api_token = os.getenv("GENIUS_API_TOKEN", default=genius_api_token)
+        self.spotify_cookie = os.getenv("SPOTIFY_COOKIE_SP_DC", default=spotify_cookie)
 
         self.model_name = model_name
         self.model_file_dir = model_file_dir
         self.cache_dir = cache_dir
         self.output_dir = output_dir
 
-        self.genius_api_token = os.getenv("GENIUS_API_TOKEN", default=genius_api_token)
-        self.spotify_cookie = os.getenv("SPOTIFY_COOKIE_SP_DC", default=spotify_cookie)
+        self.audio_file = None
+        self.youtube_url = None
 
-        self.song_artist = song_artist
-        self.song_title = song_title
-
-        if audio_file is None and youtube_url is None:
-            raise Exception("Either audio_file or youtube_url must be specified as the input source")
-        if audio_file is not None and youtube_url is not None:
-            raise Exception("Only one of audio_file or youtube_url may be specified as the input source")
-
-        if audio_file is not None:
-            self.input_source_slug = slugify.slugify(os.path.basename(audio_file), lowercase=False)
-        if youtube_url is not None:
-            parsed_url = urllib.parse.urlparse(youtube_url)
+        parsed_url = urllib.parse.urlparse(self.input_path)
+        if parsed_url.scheme and parsed_url.netloc:
+            self.youtube_url = self.input_path
             self.input_source_slug = slugify.slugify(parsed_url.hostname + "-" + parsed_url.query, lowercase=False)
+            self.logger.debug(f"Input path was valid URL, set youtube_url and input_source_slug: {self.input_source_slug}")
+        elif os.path.exists(self.input_path):
+            self.audio_file = self.input_path
+            self.input_source_slug = slugify.slugify(os.path.basename(self.audio_file), lowercase=False)
+            self.logger.debug(f"Input path was valid file path, set audio_file and input_source_slug: {self.input_source_slug}")
+        else:
+            raise Exception("Input path must be either a valid file path or URL")
 
         if self.output_dir is None:
             self.output_dir = os.path.join(os.getcwd(), "karaoke-generator-output-" + self.input_source_slug)
 
         self.output_filename_slug = None
-        self.youtube_url = youtube_url
         self.youtube_video_file = None
         self.youtube_video_image_file = None
 
-        self.audio_file = audio_file
         self.primary_stem_path = None
         self.secondary_stem_path = None
 
@@ -95,10 +102,12 @@ class KaraokeGenerator:
             self.audio_file,
             genius_api_token=self.genius_api_token,
             spotify_cookie=self.spotify_cookie,
-            song_artist=self.song_artist,
-            song_title=self.song_title,
+            artist=self.artist,
+            title=self.title,
             output_dir=self.output_dir,
             cache_dir=self.cache_dir,
+            log_formatter=self.log_formatter,
+            log_level=self.log_level,
         )
 
         transcription_metadata = transcriber.generate()
@@ -141,6 +150,8 @@ class KaraokeGenerator:
                 model_name=self.model_name,
                 model_file_dir=self.model_file_dir,
                 output_dir=self.output_dir,
+                log_formatter=self.log_formatter,
+                log_level=self.log_level,
             )
             self.primary_stem_path, self.secondary_stem_path = separator.separate()
 
@@ -204,17 +215,17 @@ class KaraokeGenerator:
                 self.youtube_video_file = youtube_info["download_filepath"]
                 self.logger.debug(f"successfully downloaded youtube video to path: {self.youtube_video_file}")
 
-        if self.song_title is None:
+        if self.title is None:
             self.logger.debug(f"Song title not specified, attempting to split from YouTube title: {youtube_info['title']}")
             # Define the hyphen variations pattern
             hyphen_pattern = regex.compile(r" [^[:ascii:]-_\p{Dash}] ")
             # Split the string using the hyphen variations pattern
             title_parts = hyphen_pattern.split(youtube_info["title"])
 
-            self.song_artist = title_parts[0]
-            self.song_title = title_parts[1]
+            self.artist = title_parts[0]
+            self.title = title_parts[1]
 
-            print(f"Guessed metadata from title: Artist: {self.song_artist}, Title: {self.song_title}")
+            print(f"Guessed metadata from title: Artist: {self.artist}, Title: {self.title}")
 
         # Extract audio to WAV file using ffmpeg
         self.audio_file = os.path.join(self.cache_dir, self.output_filename_slug + ".wav")
