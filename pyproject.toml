@@ -1,11 +1,14 @@
 [tool.poetry]
 name = "karaoke-generator"
-version = "0.4.2"
+version = "0.4.3"
 description = "Fully automated creation of _acceptable_ karaoke music videos from any music on YouTube, using open source tools and AI (e.g. Whisper and MDX-Net)"
 authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
 license = "MIT"
 readme = "README.md"
 packages = [{ include = "karaoke_generator" }]
+homepage = "https://github.com/karaokenerds/karaoke-generator"
+repository = "https://github.com/karaokenerds/karaoke-generator"
+documentation = "https://github.com/karaokenerds/karaoke-generator/blob/main/README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
