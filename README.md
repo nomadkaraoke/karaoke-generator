@@ -1,7 +1,7 @@
 # KaraokeHunt: Karaoke video generator
 Fully automated creation of _acceptable_ karaoke music videos from any music on YouTube, using open source tools and AI (e.g. Whisper and MDX-Net)
 
-[![PyPI version](https://badge.fury.io/py/karaoke-video-generator.svg)](https://badge.fury.io/py/karaoke-video-generator)
+[![PyPI version](https://badge.fury.io/py/karaoke-generator.svg)](https://badge.fury.io/py/karaoke-generator)
 
 ## Context
 This is one experimental tool as part of the journey towards implementing the [full vision](https://docs.google.com/document/d/19LS1aJI8YwSmkWmDdpCHpmTGiHL9l0VDJ1SxSl4l6Z8/edit#) for KaraokeHunt (https://karaokehunt.com).
