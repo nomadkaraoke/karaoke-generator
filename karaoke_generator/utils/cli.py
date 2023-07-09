@@ -21,7 +21,7 @@ def main():
         "input_path", nargs="?", help="The audio file path or YouTube URL to make karaoke version of.", default=argparse.SUPPRESS
     )
 
-    package_version = pkg_resources.get_distribution("karaoke-video-generator").version
+    package_version = pkg_resources.get_distribution("karaoke-generator").version
     parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {package_version}")
     parser.add_argument("--log_level", default="INFO", help="Optional: Logging level, e.g. info, debug, warning. Default: INFO")
 

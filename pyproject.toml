@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "karaoke-video-generator"
-version = "0.4.0"
+name = "karaoke-generator"
+version = "0.4.1"
 description = "Fully automated creation of _acceptable_ karaoke music videos from any music on YouTube, using open source tools and AI (e.g. Whisper and MDX-Net)"
 authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
 license = "MIT"
