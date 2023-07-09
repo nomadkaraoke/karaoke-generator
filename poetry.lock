@@ -701,13 +701,13 @@ files = [
 
 [[package]]
 name = "lyrics-transcriber"
-version = "0.6.1"
+version = "0.6.3"
 description = "Automatically create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, using Whisper and lyrics from Genius and Spotify"
 optional = false
 python-versions = ">=3.9,<3.11"
 files = [
-    {file = "lyrics_transcriber-0.6.1-py3-none-any.whl", hash = "sha256:2a080395805a5f7d54ff7d69366bf8a9a61bbeca3ab2a6dedb429885a0e23f57"},
-    {file = "lyrics_transcriber-0.6.1.tar.gz", hash = "sha256:a659238b9015175146330d3bbd212697b62851af11e519e5f34a2039001df920"},
+    {file = "lyrics_transcriber-0.6.3-py3-none-any.whl", hash = "sha256:4378260f1d7e29ac1da10f97eb890dfd5ed874fcbf5ddfda658f49c6318d77ac"},
+    {file = "lyrics_transcriber-0.6.3.tar.gz", hash = "sha256:2270b1da6309267929380658b22039782873f7b1be630d8ae905c4d96537be9b"},
 ]
 
 [package.dependencies]
@@ -1350,6 +1350,21 @@ socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
+name = "requests-file"
+version = "1.5.1"
+description = "File transport adapter for Requests"
+optional = false
+python-versions = "*"
+files = [
+    {file = "requests-file-1.5.1.tar.gz", hash = "sha256:07d74208d3389d01c38ab89ef403af0cfec63957d53a0081d8eca738d0247d8e"},
+    {file = "requests_file-1.5.1-py2.py3-none-any.whl", hash = "sha256:dfe5dae75c12481f68ba353183c53a65e6044c923e64c24b2209f6c7570ca953"},
+]
+
+[package.dependencies]
+requests = ">=1.0.0"
+six = "*"
+
+[[package]]
 name = "resampy"
 version = "0.4.2"
 description = "Efficient signal resampling"
@@ -1640,6 +1655,23 @@ files = [
 tests = ["flake8", "pytest", "pytest-cov"]
 
 [[package]]
+name = "tldextract"
+version = "3.4.4"
+description = "Accurately separates a URL's subdomain, domain, and public suffix, using the Public Suffix List (PSL). By default, this includes the public ICANN TLDs and their exceptions. You can optionally support the Public Suffix List's private domains as well."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "tldextract-3.4.4-py3-none-any.whl", hash = "sha256:581e7dbefc90e7bb857bb6f768d25c811a3c5f0892ed56a9a2999ddb7b1b70c2"},
+    {file = "tldextract-3.4.4.tar.gz", hash = "sha256:5fe3210c577463545191d45ad522d3d5e78d55218ce97215e82004dcae1e1234"},
+]
+
+[package.dependencies]
+filelock = ">=3.0.8"
+idna = "*"
+requests = ">=2.1.0"
+requests-file = ">=1.4"
+
+[[package]]
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
@@ -1883,4 +1915,4 @@ websockets = "*"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.11"
-content-hash = "cb316b518c5b27cd6870a393d43bd16b8a48c537980bd2a0bce1e28e10bb80e4"
+content-hash = "bcc6cb96cc382a168771a0cedf64d88fd460a638ae1f34c881193dafb255a7f0"

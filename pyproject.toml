@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "karaoke-generator"
-version = "0.4.1"
+version = "0.4.2"
 description = "Fully automated creation of _acceptable_ karaoke music videos from any music on YouTube, using open source tools and AI (e.g. Whisper and MDX-Net)"
 authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
 license = "MIT"
@@ -12,9 +12,10 @@ python = ">=3.9,<3.11"
 yt-dlp = "^2023.6.22"
 pydub = "^0.25.1"
 audio-separator = "^0.3"
-lyrics-transcriber = "^0.6"
+lyrics-transcriber = "^0.6.3"
 python-slugify = "^8.0.1"
 regex = "^2023.6.3"
+tldextract = "^3.4"
 # Note: after adding lyrics-transcriber with poetry lock, I then removed all traces of triton
 # from poetry.lock before running poetry install, as triton doesn't support macOS but isn't actually needed for whisper.
 # This was the only way I was able to get a working cross-platform build published to PyPI.

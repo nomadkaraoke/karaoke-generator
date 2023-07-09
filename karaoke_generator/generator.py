@@ -9,6 +9,7 @@ import logging
 import subprocess
 import yt_dlp
 import slugify
+import tldextract
 from audio_separator import Separator
 from lyrics_transcriber import LyricsTranscriber
 
@@ -56,22 +57,15 @@ class KaraokeGenerator:
         self.output_dir = output_dir
 
         self.audio_file = None
-        self.youtube_url = None
+        self.source_url = None
+        self.source_site = None
+        self.source_video_id = None
+        self.input_source_slug = None
 
-        parsed_url = urllib.parse.urlparse(self.input_path)
-        if parsed_url.scheme and parsed_url.netloc:
-            self.youtube_url = self.input_path
-            self.input_source_slug = slugify.slugify(parsed_url.hostname + "-" + parsed_url.query, lowercase=False)
-            self.logger.debug(f"Input path was valid URL, set youtube_url and input_source_slug: {self.input_source_slug}")
-        elif os.path.exists(self.input_path):
-            self.audio_file = self.input_path
-            self.input_source_slug = slugify.slugify(os.path.basename(self.audio_file), lowercase=False)
-            self.logger.debug(f"Input path was valid file path, set audio_file and input_source_slug: {self.input_source_slug}")
-        else:
-            raise Exception("Input path must be either a valid file path or URL")
+        self.parse_input_source()
 
         if self.output_dir is None:
-            self.output_dir = os.path.join(os.getcwd(), "karaoke-generator-output-" + self.input_source_slug)
+            self.output_dir = os.path.join(os.getcwd(), "karaoke-" + self.input_source_slug)
 
         self.output_filename_slug = None
         self.youtube_video_file = None
@@ -83,11 +77,36 @@ class KaraokeGenerator:
         self.output_values = {}
         self.create_folders()
 
+    def parse_input_source(self):
+        parsed_url = urllib.parse.urlparse(self.input_path)
+        if parsed_url.scheme and parsed_url.netloc:
+            self.source_url = self.input_path
+
+            ext = tldextract.extract(parsed_url.netloc.lower())
+            self.source_site = ext.registered_domain
+
+            if "youtube" in self.source_site:
+                query = urllib.parse.parse_qs(parsed_url.query)
+                self.source_video_id = query["v"][0]
+                self.input_source_slug = "youtube-" + self.source_video_id
+            else:
+                self.input_source_slug = self.source_site + slugify.slugify("-" + parsed_url.path, lowercase=False)
+
+            self.logger.debug(f"Input path was valid URL, set source_url and input_source_slug: {self.input_source_slug}")
+        elif os.path.exists(self.input_path):
+            self.audio_file = self.input_path
+            self.input_source_slug = slugify.slugify(os.path.basename(self.audio_file), lowercase=False)
+            self.logger.debug(f"Input path was valid file path, set audio_file and input_source_slug: {self.input_source_slug}")
+        else:
+            raise Exception("Input path must be either a valid file path or URL")
+
+        self.input_source_slug = "-".join(filter(None, [slugify.slugify(self.artist), slugify.slugify(self.title), self.input_source_slug]))
+
     def generate(self):
         self.logger.info("KaraokeGenerator beginning generation")
 
-        if self.audio_file is None and self.youtube_url is not None:
-            self.logger.debug(f"audio_file is none and youtube_url is {self.youtube_url}, fetching video from youtube")
+        if self.audio_file is None and self.source_url is not None:
+            self.logger.debug(f"audio_file is none and source_url is {self.source_url}, fetching video from youtube")
             self.download_youtube_video()
 
         self.separate_audio()
@@ -188,7 +207,7 @@ class KaraokeGenerator:
 
             # Download the original highest quality file
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                youtube_info = ydl.extract_info(self.youtube_url, download=False)
+                youtube_info = ydl.extract_info(self.source_url, download=False)
 
                 temp_download_filepath = ydl.prepare_filename(youtube_info)
                 self.logger.debug(f"temp_download_filepath: {temp_download_filepath}")
@@ -210,7 +229,7 @@ class KaraokeGenerator:
                 with open(ydl_info_cache_file, "w") as cache_file:
                     json.dump(ydl.sanitize_info(youtube_info), cache_file, indent=4)
 
-                ydl.download([self.youtube_url])
+                ydl.download([self.source_url])
                 shutil.move(temp_download_filepath, youtube_info["download_filepath"])
                 self.youtube_video_file = youtube_info["download_filepath"]
                 self.logger.debug(f"successfully downloaded youtube video to path: {self.youtube_video_file}")

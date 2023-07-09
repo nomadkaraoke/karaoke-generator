@@ -8,7 +8,7 @@
 /.cache/
 /models/*.onnx
 *.wav
-karaoke-generator-output-*
+/karaoke-*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
