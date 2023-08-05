@@ -100,7 +100,16 @@ class KaraokeGenerator:
         else:
             raise Exception("Input path must be either a valid file path or URL")
 
-        self.input_source_slug = "-".join(filter(None, [slugify.slugify(self.artist), slugify.slugify(self.title), self.input_source_slug]))
+        self.input_source_slug = "-".join(
+            filter(
+                None,
+                [
+                    slugify.slugify(self.artist) if self.artist else None,
+                    slugify.slugify(self.title) if self.title else None,
+                    self.input_source_slug,
+                ],
+            )
+        )
 
     def generate(self):
         self.logger.info("KaraokeGenerator beginning generation")
@@ -236,15 +245,25 @@ class KaraokeGenerator:
 
         if self.title is None:
             self.logger.debug(f"Song title not specified, attempting to split from YouTube title: {youtube_info['title']}")
-            # Define the hyphen variations pattern
-            hyphen_pattern = regex.compile(r" [^[:ascii:]-_\p{Dash}] ")
-            # Split the string using the hyphen variations pattern
-            title_parts = hyphen_pattern.split(youtube_info["title"])
 
-            self.artist = title_parts[0]
-            self.title = title_parts[1]
+            # Define the pattern using regular expressions for possible hyphen-like characters
+            hyphen_pattern = regex.compile(r" [-\u2010-\u2015] ")
 
-            print(f"Guessed metadata from title: Artist: {self.artist}, Title: {self.title}")
+            # Split the string using the hyphen pattern
+            title_parts = hyphen_pattern.split(youtube_info["title"], maxsplit=1)
+
+            if len(title_parts) < 2:
+                self.artist = None
+                self.title = None
+                self.logger.warning("Failed to extract artist and title from YouTube title.")
+            else:
+                self.artist = title_parts[0].strip()
+                self.title = title_parts[1].strip()
+
+                # Optional: further split to remove additional info, such as "(Painkiller Sessions 1990) [Audio]"
+                self.title = self.title.split(" (", 1)[0].strip()
+
+                self.logger.debug(f"Guessed metadata from title: Artist: {self.artist}, Title: {self.title}")
 
         # Extract audio to WAV file using ffmpeg
         self.audio_file = os.path.join(self.cache_dir, self.output_filename_slug + ".wav")
