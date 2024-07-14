@@ -10,8 +10,8 @@ import subprocess
 import yt_dlp
 import slugify
 import tldextract
-from audio_separator import Separator
-from lyrics_transcriber import LyricsTranscriber
+from audio_separator.separator import Separator
+from lyrics_transcriber.transcriber import LyricsTranscriber
 
 
 class KaraokeGenerator:
@@ -24,7 +24,7 @@ class KaraokeGenerator:
         title=None,
         genius_api_token=None,
         spotify_cookie=None,
-        model_name="UVR_MDXNET_KARA_2",
+        model_name="UVR_MDXNET_KARA_2.onnx",
         model_file_dir="/tmp/audio-separator-models",
         cache_dir="/tmp/karaoke-generator-cache",
         output_dir=None,
@@ -136,6 +136,8 @@ class KaraokeGenerator:
             cache_dir=self.cache_dir,
             log_formatter=self.log_formatter,
             log_level=self.log_level,
+            render_video=True,
+            video_resolution="1080p",
         )
 
         transcription_metadata = transcriber.generate()
@@ -155,10 +157,16 @@ class KaraokeGenerator:
         self.logger.debug(f"Total Song Duration: {formatted_duration}")
         self.logger.debug(f"Total Singing Duration: {formatted_singing_duration}")
         self.logger.debug(f"Singing Percentage: {transcription_metadata['singing_percentage']}%")
-        self.logger.debug(f"Whisper transcription output JSON file: {transcription_metadata['whisper_json_filepath']}")
-        self.logger.debug(f"MidiCo LRC output file: {transcription_metadata['midico_lrc_filepath']}")
-        self.logger.debug(f"Genius lyrics output file: {transcription_metadata['genius_lyrics_filepath']}")
-        self.logger.debug(f"Spotify lyrics output file: {transcription_metadata['genius_lyrics_filepath']}")
+
+        # Add checks for optional keys
+        if "whisper_json_filepath" in transcription_metadata:
+            self.logger.debug(f"Whisper transcription output JSON file: {transcription_metadata['whisper_json_filepath']}")
+        if "midico_lrc_filepath" in transcription_metadata:
+            self.logger.debug(f"MidiCo LRC output file: {transcription_metadata['midico_lrc_filepath']}")
+        if "genius_lyrics_filepath" in transcription_metadata:
+            self.logger.debug(f"Genius lyrics output file: {transcription_metadata['genius_lyrics_filepath']}")
+        if "spotify_lyrics_filepath" in transcription_metadata:
+            self.logger.debug(f"Spotify lyrics output file: {transcription_metadata['spotify_lyrics_filepath']}")
 
     def separate_audio(self):
         if self.audio_file is None or not os.path.isfile(self.audio_file):
@@ -172,16 +180,17 @@ class KaraokeGenerator:
         if os.path.isfile(self.primary_stem_path) and os.path.isfile(self.secondary_stem_path):
             self.logger.debug(f"Separated audio files already exist in output paths, skipping separation: {self.primary_stem_path}")
         else:
-            self.logger.debug(f"instantiating Separator with model_name: {self.model_name} and output_dir: {self.output_dir}")
+            self.logger.debug(f"instantiating Separator with model_file_dir: {self.model_file_dir} and output_dir: {self.output_dir}")
             separator = Separator(
-                self.audio_file,
-                model_name=self.model_name,
-                model_file_dir=self.model_file_dir,
-                output_dir=self.output_dir,
                 log_formatter=self.log_formatter,
                 log_level=self.log_level,
+                model_file_dir=self.model_file_dir,
+                output_dir=self.output_dir,
+                output_format="wav",
             )
-            self.primary_stem_path, self.secondary_stem_path = separator.separate()
+
+            separator.load_model(model_filename=self.model_name)
+            self.primary_stem_path, self.secondary_stem_path = separator.separate(self.audio_file)
 
             self.logger.debug(f"Separation complete! Output files: {self.primary_stem_path} {self.secondary_stem_path}")
 

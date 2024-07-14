@@ -49,7 +49,7 @@ def main():
 
     parser.add_argument(
         "--model_name",
-        default="UVR_MDXNET_KARA_2",
+        default="UVR_MDXNET_KARA_2.onnx",
         help="Optional: model name to be used for audio separation.",
     )
     parser.add_argument(
