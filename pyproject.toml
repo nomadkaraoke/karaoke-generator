@@ -11,7 +11,7 @@ repository = "https://github.com/karaokenerds/karaoke-generator"
 documentation = "https://github.com/karaokenerds/karaoke-generator/blob/main/README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.9"
 yt-dlp = ">=2024.07.09"
 pydub = ">=0.25"
 audio-separator = ">=0.6"
