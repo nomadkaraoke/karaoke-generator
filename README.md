@@ -1,3 +1,7 @@
+# Archived! Superceded by: https://github.com/nomadkaraoke/karaoke-gen
+
+-------------
+
 # KaraokeHunt: Karaoke video generator
 Fully automated creation of _acceptable_ karaoke music videos from any music on YouTube, using open source tools and AI (e.g. Whisper and MDX-Net)
 
